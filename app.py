@@ -56,7 +56,7 @@ def load_data(arquivo_upload):
     return X, Y, df
 
 # TREINAMENTO DOS MODELOS
-@st.cache_resource
+@st.cache_data
 def treina_modelo(X_train, Y_train, option, nn_neurons, nn_activation, nn_learning_rate, nn_epochs, lr_solver, lr_C, lr_max_iter): 
 
     if option == "Rede Neural":        
