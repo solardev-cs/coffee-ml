@@ -21,13 +21,13 @@ O aplicativo permite:
 
 Este projeto utiliza o ecossistema Python para ML e visualização interativa:
 
-|  |  |  |
-| :--- | :--- | :--- |
-| Interface | Streamlit | Criação da interface web interativa. |
-| Modelagem | TensorFlow / Keras | Construção e treinamento da Rede Neural Densa. |
-| Modelagem | Scikit-learn | Implementação e treinamento da Regressão Logística. |
-| Dados | Pandas | Manipulação de dados. |
-| Numérico | NumPy | Operações numéricas. |
+| **Ferramenta** | **Objetivo** |
+| :--- | :--- |
+| Streamlit | Criação da interface web interativa. |
+| TensorFlow / Keras | Construção e treinamento da Rede Neural Densa. |
+| Scikit-learn | Implementação e treinamento da Regressão Logística. |
+| Pandas | Manipulação de dados. |
+| NumPy | Operações numéricas. |
 
 ### ℹ️ Como Executar Localmente
 
