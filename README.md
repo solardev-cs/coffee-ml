@@ -21,6 +21,7 @@ O aplicativo permite:
 
 Este projeto utiliza o ecossistema Python para ML e visualização interativa:
 
+|  |  |  |
 | :--- | :--- | :--- |
 | Interface | Streamlit | Criação da interface web interativa. |
 | Modelagem | TensorFlow / Keras | Construção e treinamento da Rede Neural Densa. |
