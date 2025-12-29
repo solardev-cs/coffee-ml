@@ -58,4 +58,5 @@ Siga os passos abaixo para rodar o aplicativo na sua máquina:
     ```
 
 O aplicativo será aberto automaticamente no seu navegador padrão.
+
 Utilize os dados de treino e teste disponíveis na pasta \data.
