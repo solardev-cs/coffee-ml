@@ -7,6 +7,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 import tensorflow as tf
 from tensorflow import keras
+from xgboost import XGBClassifier
 
 # INICIALIZAÇÃO DE HIPERPARÂMETROS
 if 'nn_neurons' not in st.session_state:
@@ -24,6 +25,13 @@ if 'lr_C' not in st.session_state:
     st.session_state.lr_C = 1e9
 if 'lr_max_iter' not in st.session_state:
     st.session_state.lr_max_iter = 1000
+
+if 'xgb_estimators' not in st.session_state:
+    st.session_state.xgb_estimators = 200
+if 'xgb_learning_rate' not in st.session_state:
+    st.session_state.xgb_learning_rate = 0.1
+if 'xgb_max_depth' not in st.session_state:
+    st.session_state.xgb_max_depth = 3
 
 # CARREGAMENTO DE DADOS DE TREINO
 def load_data(arquivo_upload):
@@ -57,7 +65,7 @@ def load_data(arquivo_upload):
 
 # TREINAMENTO DOS MODELOS
 @st.cache_data
-def treina_modelo(X_train, Y_train, option, nn_neurons, nn_activation, nn_learning_rate, nn_epochs, lr_solver, lr_C, lr_max_iter): 
+def treina_modelo(X_train, Y_train, option, nn_neurons, nn_activation, nn_learning_rate, nn_epochs, lr_solver, lr_C, lr_max_iter, xgb_estimators, xgb_learning_rate, xgb_max_depth): 
 
     if option == "Rede Neural":        
         tf.random.set_seed(1234)
@@ -103,6 +111,22 @@ def treina_modelo(X_train, Y_train, option, nn_neurons, nn_activation, nn_learni
 
         st.success("✅ Treinamento concluído!")
         return lr_model
+    
+    elif option == "XGBoost":
+
+        # Modelo do ensemble de árvores de decisão
+        xgb_model = XGBClassifier(
+            n_estimators=xgb_estimators,
+            learning_rate=xgb_learning_rate,
+            max_depth=xgb_max_depth,
+            objective='binary:logistic' 
+        )
+
+        # Treinamento do modelo
+        xgb_model.fit(X_train, Y_train)
+
+        st.success("✅ Treinamento concluído!")
+        return xgb_model
 
 def reseta_state():
     st.session_state.is_trained = False
@@ -120,7 +144,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="auto",
     menu_items={
-        'About': "App que compara a qualidade preditiva de uma rede neural x uma regressão logística clássica para um problema de classificação binária."
+        'About': "App que compara a qualidade preditiva de 3 modelos de ML para classificação binária."
     }
 )
 
@@ -132,7 +156,7 @@ with st.sidebar:
     st.subheader("⚙️ Configurações dos Modelos")
     option = st.selectbox(
         "Selecione o modelo de previsão:",
-        ("Rede Neural", "Regressão Logística"),
+        ("Rede Neural", "Regressão Logística", "XGBoost"),
         on_change=reseta_state
     )
     st.write("")
@@ -162,7 +186,7 @@ with st.sidebar:
             max_value=0.1,
             value=0.01,
             step=0.001,
-            format="%.4f",
+            format="%.3f",
             help="Ajusta o tamanho dos passos na otimização."
         )
         # Número de épocas de treinamento
@@ -223,17 +247,57 @@ with st.sidebar:
             - **Normalização:** `StandardScaler`
             - **Biblioteca:** Scikit-learn
             """
-        )    
+        )
+
+    elif option == "XGBoost":
+        # Número de estimadores
+        st.session_state.xgb_estimators = st.number_input(
+            "Número de Árvores",
+            min_value=10,
+            max_value=500,
+            value=100,
+            step=10,
+            help="Define o número de árvores no ensemble."
+        )     
+        # Learning rate
+        st.session_state.xgb_learning_rate = st.number_input(
+            "Taxa de Aprendizado (Learning Rate)",
+            min_value=0.01,
+            max_value=0.5,
+            value=0.1,
+            step=0.01,
+            format="%.3f",
+            help="Ajusta o tamanho dos passos na otimização."
+        )      
+        # Profundidade da árvore
+        st.session_state.xgb_max_depth = st.slider(
+            "Profundidade Máxima",
+            min_value=1,
+            max_value=10,
+            value=3,
+            step=1,
+            help="Profundidade máxima de cada árvore."
+        )             
+        st.write("")
+        st.markdown("#### ℹ️ Dados do Modelo")
+        st.markdown(
+            """
+            - **Arquitetura:** Gradient Boosted Decision Trees
+            - **Algoritmo:** eXtreme Gradient Boosting  
+            - **Função de Custo:** Log Loss         
+            - **Biblioteca:** XGBoost
+            """
+        )       
     
     st.divider() 
     with st.container(horizontal=True):   
         st.space("large") 
-        st.markdown(":grey[v1.0 (2025)  |  by CS]")        
+        st.markdown(":grey[v2.0 (2025)  |  by CS]")        
 
 # CABEÇALHO DO APP 
 st.subheader("Coffee ML")
 st.markdown("☕️ Aplicativo para prever a qualidade da torra de café.")
-st.markdown("🧠 O app treina uma rede neural simples e uma regressão logística, classificando os dados de teste.")
+st.markdown("🧠 O app treina uma rede neural, uma regressão logística e um ensemble de árvores de decisão, classificando os dados de teste.")
 st.divider()
 st.markdown("#### Treino")
 
@@ -321,7 +385,10 @@ with st.container():
                             st.session_state.nn_epochs,
                             st.session_state.lr_solver, 
                             st.session_state.lr_C, 
-                            st.session_state.lr_max_iter
+                            st.session_state.lr_max_iter,
+                            st.session_state.xgb_estimators,
+                            st.session_state.xgb_learning_rate,
+                            st.session_state.xgb_max_depth
                         )
                         st.session_state.is_trained = True                        
 
@@ -341,7 +408,33 @@ with st.container():
                             st.session_state.nn_epochs,
                             st.session_state.lr_solver, 
                             st.session_state.lr_C, 
-                            st.session_state.lr_max_iter
+                            st.session_state.lr_max_iter,
+                            st.session_state.xgb_estimators,
+                            st.session_state.xgb_learning_rate,
+                            st.session_state.xgb_max_depth
+                        )
+                        st.session_state.is_trained = True
+                
+                # Treina XGBoost
+                elif option == "XGBoost":
+                    Xn = X_train
+
+                    # Converte targets para array numpy 1-D
+                    Yt = Y_train.ravel()
+
+                    if st.button("Treinar Modelo XGB"):
+                        st.session_state.model = treina_modelo(
+                            Xn, Yt, option, 
+                            st.session_state.nn_neurons, 
+                            st.session_state.nn_activation, 
+                            st.session_state.nn_learning_rate, 
+                            st.session_state.nn_epochs,
+                            st.session_state.lr_solver, 
+                            st.session_state.lr_C, 
+                            st.session_state.lr_max_iter,
+                            st.session_state.xgb_estimators,
+                            st.session_state.xgb_learning_rate,
+                            st.session_state.xgb_max_depth
                         )
                         st.session_state.is_trained = True
             
@@ -375,17 +468,9 @@ with st.container():
                 df_test = pd.read_csv(arquivo_test)
                 
                 st.info(f"Dados de teste carregados: {df_test.shape[0]} amostras.")
-                
-                # 3. Preparação dos Dados (Assumindo que as 2 primeiras colunas são as features)
-                # Adapte as colunas conforme o nome/posição real do seu CSV de teste
-                
-                # Se você usou o nome das colunas da Opção 1:
-                if 'Temperature (C)' in df_test.columns and 'Duration (min)' in df_test.columns:
-                    X_test_df = df_test[['Temperature (C)', 'Duration (min)']]
-                # Caso contrário, use as 2 primeiras colunas (índice 0 e 1):
-                else:
-                    X_test_df = df_test.iloc[:, 0:2] # Pega as duas primeiras colunas
 
+                # Pega as duas primeiras colunas
+                X_test_df = df_test.iloc[:, 0:2] 
                 # Converte para array numpy
                 X_test = X_test_df.values
 
@@ -399,8 +484,11 @@ with st.container():
                     # Normalização
                     X_testn = st.session_state.scaler.transform(X_test)
                     # Previsão
-                    probabilities = st.session_state.model.predict_proba(X_testn)[:, 1] 
-                    predictions = probabilities
+                    predictions = st.session_state.model.predict_proba(X_testn)[:, 1]
+                
+                elif option == "XGBoost":
+                    # Previsão    
+                    predictions = st.session_state.model.predict_proba(X_test)[:, 1]
 
                 # Cria colunas de probabilidade e previsão no dataframe
                 df_test['Probabilidade (P)'] = np.round(predictions, decimals=4)
@@ -441,7 +529,7 @@ with st.container():
 
                         fig.update_layout(legend_title_text='Torra Ideal')
 
-                        # Gráfico com fronteira de decisão                        
+                        # Gráfico com fronteira de decisão para NN                        
                         if 'history' in st.session_state and option == "Rede Neural":                           
 
                             fig_nn = px.scatter(
@@ -522,9 +610,9 @@ with st.container():
                             st.markdown("**Curva de Aprendizado**")                            
                             hist_df = pd.DataFrame(st.session_state.history)                      
                             st.line_chart(hist_df[['loss', 'val_loss']]) 
-                            st.caption("A linha 'loss' deve cair consistentemente. Se 'val_loss' subir, há overfitting.") 
+                            #st.caption("A linha 'loss' deve cair consistentemente. Se 'val_loss' subir, há overfitting.") 
 
-                        # Gráfico com fronteira de decisão
+                        # Gráfico com fronteira de decisão para LR
                         if 'scaler' in st.session_state and option == "Regressão Logística":
 
                             # Obtém coeficientes e bias
@@ -593,7 +681,75 @@ with st.container():
                             fig.update_yaxes(range=[y_range_min, y_range_max])
 
                             # Mostra o gráfico no Streamlit
-                            st.plotly_chart(fig, width="stretch")                                                                             
+                            st.plotly_chart(fig, width="stretch")
+
+                        # Gráfico com fronteira de decisão para XGBoost
+                        elif option == "XGBoost":
+                            # Criação do gráfico base com os dados de teste
+                            fig_xgb = px.scatter(
+                                df_test,
+                                x='Temperatura (C)',
+                                y='Duracao (min)',
+                                color='Previsao (Y)', 
+                                color_discrete_map={'1': 'green', '0': 'red'},
+                                labels={'1': 'Ideal (1)', '0': 'Não Ideal (0)'},
+                                title='Fronteira de Decisão XGBoost'
+                            )
+                            fig_xgb.update_layout(legend_title_text='Torra Ideal')
+
+                            # Recupera o modelo treinado
+                            model = st.session_state.model
+
+                            # Define limites da plotagem baseados nos dados de treino
+                            x1_min, x1_max = df['Temperatura (C)'].min(), df['Temperatura (C)'].max()
+                            x2_min, x2_max = df['Duracao (min)'].min(), df['Duracao (min)'].max()
+
+                            # Cria meshgrid (grade de 100x100 pontos)
+                            x1_plot = np.linspace(x1_min, x1_max, 100)
+                            x2_plot = np.linspace(x2_min, x2_max, 100)
+                            X1, X2 = np.meshgrid(x1_plot, x2_plot)
+                            X_grid = np.c_[X1.ravel(), X2.ravel()]
+
+                            # Prever no grid (Probabilidades)
+                            Z = model.predict_proba(X_grid)[:, 1]
+                            Z = Z.reshape(X1.shape)
+
+                            # Adiciona o contorno ao gráfico
+                            fig_xgb.add_contour(
+                                x=x1_plot,
+                                y=x2_plot,
+                                z=Z,
+                                showscale=False,
+                                colorscale='RdBu',        
+                                opacity=0.3,              
+                                name='Fronteira XGBoost',
+                                line_width=0,             
+                                contours_coloring='fill', 
+                                hoverinfo='skip'          
+                            )
+
+                            # Adiciona pontos de treino
+                            fig_xgb.add_scatter(
+                                x=df['Temperatura (C)'],
+                                y=df['Duracao (min)'],
+                                mode='markers',
+                                name='Dados de Treino',
+                                marker=dict(
+                                    color=df['Ideal (Y)'].map({'1': 'rgba(0, 128, 0, 0.4)', '0': 'rgba(255, 0, 0, 0.4)'}),
+                                    size=8,
+                                    line=dict(width=1, color='DarkSlateGrey')
+                                ),
+                                showlegend=False
+                            )
+
+                            # Ajusta escala do eixo Y
+                            y_min = min(df['Duracao (min)'].min(), df_test['Duracao (min)'].min())
+                            y_max = max(df['Duracao (min)'].max(), df_test['Duracao (min)'].max())
+                            margin = (y_max - y_min) * 0.05
+                            fig_xgb.update_yaxes(range=[y_min - margin, y_max + margin])
+
+                            # Mostra o gráfico final
+                            st.plotly_chart(fig_xgb, width="stretch")                                                                             
 
             except Exception as e:
                 st.error(f"Ocorreu um erro ao processar o arquivo CSV: {e}")
