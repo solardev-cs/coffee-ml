@@ -255,7 +255,7 @@ with st.sidebar:
             "Número de Árvores",
             min_value=10,
             max_value=500,
-            value=100,
+            value=200,
             step=10,
             help="Define o número de árvores no ensemble."
         )     
